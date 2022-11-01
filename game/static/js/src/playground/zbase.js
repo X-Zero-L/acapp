@@ -1,11 +1,14 @@
+let HEX = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+
 let GET_RANDOM_COLOR = function (){
-    let color = "#";
+    let color = "#";//#开头表示的是一个十六进制的颜色编码，后面总共6位数
     for (let i = 0 ; i < 6 ; ++i)
     {
         color +=HEX[Math.floor(Math.random()*16)];
     }
     return color;
 }
+
 
 class AcGamePlayground
 {
@@ -42,6 +45,7 @@ class AcGamePlayground
             outer.root.$menu.show();
         });
     }
+
 
     show()
     {

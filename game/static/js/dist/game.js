@@ -118,7 +118,62 @@ let AC_GAME_ANIMATION = function(timestp) // timestp 是传入的一个参数，
 }
 
 requestAnimationFrame(AC_GAME_ANIMATION);
-class GameMap extends AcGameObject {
+class Particle extends AcGameObject
+{
+    constructor(playground,x,y,radius,color,vx,vy,speed) {
+        super();
+        this.playground = playground;
+        this.ctx = this.playground.game_map.ctx;
+        this.x=x;
+        this.y=y;
+        this.radius=radius;
+        this.color=color;
+
+        this.vx=vx;
+        this.vy=vy;
+        this.speed=speed;
+    }
+
+    render()
+    {
+        this.ctx.beginPath();
+        this.ctx.arc(this.x,this.y,this.radius,0,Math.PI*2,false);
+        this.ctx.fillStyle=this.color;
+        this.ctx.fill();
+    }
+
+    start()
+    {
+        this.friction_speed=0.8;
+        this.friction_radius=0.8;
+    }
+
+    is_attacked()
+    {
+        return false;
+    }
+
+    update() {
+        this.update_move();
+        this.render();
+    }
+
+    update_move()
+    {
+        if(this.speed<EPS*10||this.radius<EPS*10)
+        {
+            this.destroy();
+            return false;
+        }
+
+        this.x+=this.vx*this.speed*this.timedelta/1000;
+        this.y+=this.vx*this.speed*this.timedelta/1000;
+
+        this.speed *= this.friction_speed;
+        this.radius *= this.friction_radius;
+    }
+
+}class GameMap extends AcGameObject {
     constructor(playground) {
         super();
         this.playground = playground;
@@ -157,10 +212,8 @@ let GET_DIST = function(x1, y1, x2, y2)
 
 let EPS=0.1;
 
-class Player extends AcGameObject
-{
-    constructor(playground, x, y, radius, color, is_me, speed)
-    {
+class Player extends AcGameObject {
+    constructor(playground, x, y, radius, color, is_me, speed) {
         super(true);
 
         this.playground = playground; // 所属playground
@@ -171,72 +224,190 @@ class Player extends AcGameObject
         this.radius = radius; // 半径
         this.color = color; // 颜色
         this.is_me = is_me; // 玩家类型
-        this.vx =0;
-        this.vy =0;
-        this.move_length =0;
+        this.vx = 0;
+        this.vy = 0;
+        this.move_length = 0;
         this.speed = speed; // 速度
         this.is_alive = true; // 是否存活
 
         this.eps = 0.1; // 精度
         //this.start();
 
+        this.cur_skill = null;
+
     }
 
-    add_listening_events()
-    {
-        let outer=this;
-        this.playground.game_map.$canvas.on("contextmenu",function (){
+    add_listening_events() {
+        let outer = this;
+        this.playground.game_map.$canvas.on("contextmenu", function () {
             return false;//关闭画布的原右键监听事件
         });
-        this.playground.game_map.$canvas.mousedown(function (e){
-            if(!outer.is_alive) return false;//已经去世的球不能动
+        this.playground.game_map.$canvas.mousedown(function (e) {
+            if (!outer.is_alive) return false;//已经去世的球不能动
             let ee = e.which; // e.which是鼠标对应点击的值
-            if (ee===3) // 右键
+            if (ee === 3) // 右键
             {
-                outer.move_to(e.clientX,e.clientY);//分别为鼠标点击处的x坐标和y坐标
+                outer.move_to(e.clientX, e.clientY);//分别为鼠标点击处的x坐标和y坐标
+            } else if (ee === 1) {
+                if (outer.cur_skill === "fireball") {
+                    outer.shoot_fireball(e.clientX, e.clientY);
+                    return false;
+                }
+                outer.cur_skill = null;//点击之后清空
+            }
+        });
+
+        $(window).keydown(function (e) {
+            if (!outer.is_alive) return false;
+            let ee = e.which;
+            if (ee === 81) //81是Q的key-code
+            {
+                outer.cur_skill = "fireball";
+                return false;
             }
         });
     }
 
-    move_to(tx,ty)
-    {
-        this.move_length = GET_DIST(this.x,this.y,tx,ty);
-        let dx=tx-this.x,dy=ty-this.y;
-        let angle = Math.atan2(dy,dx);//角度
-        this.vx=Math.cos(angle);//余弦
-        this.vy=Math.sin(angle);//正弦
-        console.log("move_to",tx,ty);
-        console.log("x,y:",parseInt(this.x),parseInt(this.y));
-        console.log("dx,dy:",dx,dy);
-        console.log("length",this.move_length);
+    shoot_fireball(tx, ty) {
+        //console.log(tx, ty);
+        let x = this.x, y = this.y;
+        let radius = this.playground.height * 0.01;
+        let color = "orange";
+        let damage = this.playground.height * 0.01;
+        let angle = Math.atan2(ty - y, tx - x);
+        let vx = Math.cos(angle), vy = Math.sin(angle);
+        let speed = this.playground.height * 0.5;
+        let move_dist = this.playground.height * 1;
+
+        new Fireball(this.playground, this, x, y, radius, color, damage, vx, vy, speed, move_dist);
+    }
+
+    is_attacked(obj) {
+        let angle = Math.atan2(this.y - obj.y, this.x - obj.x);
+        let damage = obj.damage;
+        console.log("球被攻击");
+        this.is_attacked_concrete(angle, damage);
+    }
+
+    is_attacked_concrete(angle, damage) {
+        //this.explode_particle();
+        this.radius -= damage;
+        this.friction_damage = 0.8;
+
+        if (this.is_died()) return false;
+
+        this.x_damage = Math.cos(angle);
+        this.y_damage = Math.sin(angle);
+        this.speed_damage = damage * 100;
+        this.explode_particle();//粒子爆发
+    }
+
+    explode_particle() {
+        for (let i = 0; i < 10 + Math.random() * 5; ++i) {
+            let x = this.x, y = this.y;
+            let radius = this.radius / 3;
+            let angle = Math.PI * 2 * Math.random();//随机方向粒子爆发
+            let vx = Math.cos(angle), vy = Math.sin(angle);
+            let color = this.color;
+            let speed = this.speed * 10;
+
+            new Particle(this.playground, x, y, radius, color, vx, vy, speed);//粒子对象创建
+
+
+        }
+    }
+
+    is_died() {
+        if (this.radius < EPS * 10) {
+            this.destroy();
+            return true;
+        }
+        return false;
+    }
+
+    move_to(tx, ty) {
+        this.move_length = GET_DIST(this.x, this.y, tx, ty);
+        let dx = tx - this.x, dy = ty - this.y;
+        let angle = Math.atan2(dy, dx);//角度
+        this.vx = Math.cos(angle);//余弦
+        this.vy = Math.sin(angle);//正弦
+        //console.log("move_to", tx, ty);
+        //console.log("x,y:", parseInt(this.x), parseInt(this.y));
+        //console.log("dx,dy:", dx, dy);
+        //console.log("length", this.move_length);
 
     }
-    render()
-    {
+
+    render() {
         this.ctx.beginPath();
         this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
 
-    start()
-    {
-        if (this.is_me)
-        {
+    start() {
+        if (this.is_me) {
             this.add_listening_events();
         }
+        this.cold_time = 5;
     }
 
-    update()
-    {
+    update() {
         //this.x+=this.vx;
         //this.y+=this.vy;
         this.update_move();
-        this.render(); // 同样要一直画一直画（yxc：“人不吃饭会死，物体不一直画会消失。”）
+        this.render();
+        this.update_AI();
+    }
+
+    update_AI() {
+        if (this.is_me) return false;
+
+        this.update_AI_move();
+        if (!this.update_AI_cold_time()) return false;
+        this.update_AI_shoot_fireball();
+    }
+
+    update_AI_cold_time()
+    {
+        if(this.cold_time>0)
+        {
+            this.cold_time -= this.timedelta/1000;
+            return false;
+        }
+        return true;
+    }
+
+    update_AI_shoot_fireball()
+    {
+        if(Math.random()<1/300.0)
+        {
+            let player = this.playground.players[0];
+            this.shoot_fireball(player.x,player.y);
+        }
+    }
+
+    update_AI_move()
+    {
+        if(this.move_length<EPS)
+        {
+            let tx = Math.random()*this.playground.width;
+            let ty = Math.random()*this.playground.height;
+            this.move_to(tx,ty);
+        }
     }
 
     update_move() // 将移动单独写为一个过程
     {
+        if (this.speed_damage&&this.speed_damage>EPS)
+        {
+            this.vx=this.vy=0;
+            this.move_length=0;
+            this.x+=this.x_damage*this.speed_damage*this.timedelta/1000;
+            this.y+=this.y_damage*this.speed_damage*this.timedelta/1000;
+            this.speed_damage*=this.friction_damage;
+        }
+
         if (this.move_length < EPS) // 移动距离没了（小于精度）
         {
             //console.log(this.x,this.y);
@@ -270,6 +441,107 @@ class Player extends AcGameObject
         }
     }
 }
+let IS_COLLISION = function (obj1,obj2)
+{
+    return GET_DIST(obj1.x,obj1.y,obj2.x,obj2.y)<obj1.radius+obj2.radius;
+}
+
+class Fireball extends AcGameObject {
+    constructor(playground, player, x, y, radius, color, damage, vx, vy, speed, move_dist) {
+        // 有些步骤前面重复过，这里不再赘述
+        super(true);
+        this.playground = playground;
+        this.player = player;
+        this.ctx = this.playground.game_map.ctx;
+
+        this.x = x;
+        this.y = y;
+        this.radius = radius; // 半径
+        this.color = color;
+        this.damage = damage; // 伤害值
+
+        this.vx = vx; // 移动方向
+        this.vy = vy; // 移动方向
+        this.speed = speed; // 速度
+        this.move_dist = move_dist; // 射程
+
+    }
+
+    is_satisfy_collision(obj) // 真的碰撞的条件
+    {
+        if (this === obj) return false; // 自身不会被攻击
+        if (this.player === obj) return false; // 发射源不会被攻击
+        return IS_COLLISION(this, obj); // 距离是否满足
+    }
+
+    hit(obj) // 碰撞
+    {
+        obj.is_attacked(this); // obj被this攻击了
+        this.is_attacked(obj); // this被obj攻击了
+    }
+
+    is_attacked(obj) // 被伤害
+    {
+        this.is_attacked_concrete(0, 0); // 火球不需要关注伤害值和血量，因为碰到后就直接消失
+    }
+
+    is_attacked_concrete(angle, damage)
+    {
+        this.destroy(); // 直接消失
+    }
+
+    render() {
+        this.ctx.beginPath();
+        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.fillStyle = this.color;
+        this.ctx.fill();
+    }
+
+    start() {
+
+    }
+
+    update() {
+        this.update_attack();
+        this.update_move();
+        this.render();
+    }
+
+    update_attack() {
+        for (let i = 0; i < AC_GAME_OBJECTS.length; ++i) {
+            let obj = AC_GAME_OBJECTS[i];
+            if (this.is_satisfy_collision(obj)) // 如果真的碰撞了（这样可以保证碰撞条件可以自行定义，以后会很好维护）
+            {
+                this.hit(obj); // 两个物体碰撞了
+                break; // 火球，只能碰到一个物体
+            }
+        }
+    }
+
+    update_move() {
+        if (this.move_dist < EPS) // 如果走完射程了就消失
+        {
+            this.destroy();
+            return false;
+        }
+
+        let moved = Math.min(this.move_dist, this.speed * this.timedelta / 1000);
+        this.x += this.vx * moved;
+        this.y += this.vy * moved;
+        this.move_dist -= moved;
+    }
+}let HEX = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+
+let GET_RANDOM_COLOR = function (){
+    let color = "#";//#开头表示的是一个十六进制的颜色编码，后面总共6位数
+    for (let i = 0 ; i < 6 ; ++i)
+    {
+        color +=HEX[Math.floor(Math.random()*16)];
+    }
+    return color;
+}
+
+
 class AcGamePlayground
 {
     constructor(root)
@@ -288,6 +560,10 @@ class AcGamePlayground
         this.players = []; // 创建一个用于储存玩家的数组
 
         this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, "red", true, this.height * 0.15));
+        for(let i=0;i<5;++i)
+        {
+            this.players.push(new Player(this,this.width / 2,this.height/2,this.height*0.05,GET_RANDOM_COLOR(),false,this.height*0.15))
+        }
 
         this.$back = this.$playground.find('.ac-game-playground-item-back')
         this.start();
@@ -301,6 +577,7 @@ class AcGamePlayground
             outer.root.$menu.show();
         });
     }
+
 
     show()
     {
