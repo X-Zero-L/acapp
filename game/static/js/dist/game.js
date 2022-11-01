@@ -132,12 +132,16 @@ class Particle extends AcGameObject
         this.vx=vx;
         this.vy=vy;
         this.speed=speed;
+
+        //this.move_length=move_length;
+        this.eps = 0.01;
+        this.friction=0.9;
     }
 
     render()
     {
         this.ctx.beginPath();
-        this.ctx.arc(this.x,this.y,this.radius,0,Math.PI*2,false);
+        this.ctx.arc(this.x,this.y,this.radius*2,0,Math.PI*2,false);
         this.ctx.fillStyle=this.color;
         this.ctx.fill();
     }
@@ -165,12 +169,13 @@ class Particle extends AcGameObject
             this.destroy();
             return false;
         }
-
-        this.x+=this.vx*this.speed*this.timedelta/1000;
-        this.y+=this.vx*this.speed*this.timedelta/1000;
+        let moved = Math.min(this.radius,this.speed*this.timedelta/1000);
+        this.x+=this.vx*moved;
+        this.y+=this.vx*moved;
 
         this.speed *= this.friction_speed;
         this.radius *= this.friction_radius;
+        //this.move_length -=moved;
     }
 
 }class GameMap extends AcGameObject {
@@ -308,7 +313,8 @@ class Player extends AcGameObject {
             let radius = this.radius / 3;
             let angle = Math.PI * 2 * Math.random();//随机方向粒子爆发
             let vx = Math.cos(angle), vy = Math.sin(angle);
-            let color = this.color;
+            //let color = this.color;
+            let color = GET_RANDOM_COLOR();
             let speed = this.speed * 10;
 
             new Particle(this.playground, x, y, radius, color, vx, vy, speed);//粒子对象创建

@@ -102,7 +102,8 @@ class Player extends AcGameObject {
             let radius = this.radius / 3;
             let angle = Math.PI * 2 * Math.random();//随机方向粒子爆发
             let vx = Math.cos(angle), vy = Math.sin(angle);
-            let color = this.color;
+            //let color = this.color;
+            let color = GET_RANDOM_COLOR();
             let speed = this.speed * 10;
 
             new Particle(this.playground, x, y, radius, color, vx, vy, speed);//粒子对象创建
