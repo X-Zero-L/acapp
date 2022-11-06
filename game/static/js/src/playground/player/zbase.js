@@ -18,6 +18,11 @@ class Player extends AcGameObject {
         this.radius = radius; // 半径
         this.color = color; // 颜色
         this.is_me = is_me; // 玩家类型
+        if(this.is_me)
+        {
+            this.img = new Image();
+            this.img.src = this.playground.root.settings.photo;
+        }
         this.vx = 0;
         this.vy = 0;
         this.move_length = 0;
@@ -135,10 +140,24 @@ class Player extends AcGameObject {
     }
 
     render() {
-        this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        this.ctx.fillStyle = this.color;
-        this.ctx.fill();
+        if(this.is_me)
+        {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(this.x,this.y,this.radius,0,Math.PI*2,false);
+            this.lineWidth = EPS*10;
+            this.ctx.stroke();
+            this.ctx.clip();
+            this.ctx.drawImage(this.img,this.x-this.radius,this.y-this.radius,this.radius*2,this.radius*2);
+            this.ctx.restore();
+        }
+        else
+        {
+            this.ctx.beginPath();
+            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.fillStyle = this.color;
+            this.ctx.fill();
+        }
     }
 
     start() {

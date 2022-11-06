@@ -18,7 +18,7 @@ class AcGamePlayground
         this.$playground = $(`
 <div class="ac-game-playground"></div>
 `);
-        
+
 
         this.$back = this.$playground.find('.ac-game-playground-item-back')
         this.start();

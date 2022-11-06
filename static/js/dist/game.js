@@ -1,5 +1,5 @@
 class AcGameMenu {
-    constructor(root) {
+    constructor(root,OS) {
         this.root = root;
         this.$menu = $(`
 <div class="ac-game-menu">
@@ -18,11 +18,11 @@ class AcGameMenu {
     </div>
 </div>
 `);
+        this.OS=OS;
         this.root.$ac_game.append(this.$menu);
         this.$single_mode = this.$menu.find('.ac-game-menu-field-item-single-mode');
         this.$multi_mode = this.$menu.find('.ac-game-menu-field-item-multi-mode');
         this.$settings = this.$menu.find('.ac-game-menu-field-item-settings');
-
         this.start();
     }
 
@@ -229,6 +229,11 @@ class Player extends AcGameObject {
         this.radius = radius; // 半径
         this.color = color; // 颜色
         this.is_me = is_me; // 玩家类型
+        if(this.is_me)
+        {
+            this.img = new Image();
+            this.img.src = this.playground.root.settings.photo;
+        }
         this.vx = 0;
         this.vy = 0;
         this.move_length = 0;
@@ -346,10 +351,24 @@ class Player extends AcGameObject {
     }
 
     render() {
-        this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        this.ctx.fillStyle = this.color;
-        this.ctx.fill();
+        if(this.is_me)
+        {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(this.x,this.y,this.radius,0,Math.PI*2,false);
+            this.lineWidth = EPS*10;
+            this.ctx.stroke();
+            this.ctx.clip();
+            this.ctx.drawImage(this.img,this.x-this.radius,this.y-this.radius,this.radius*2,this.radius*2);
+            this.ctx.restore();
+        }
+        else
+        {
+            this.ctx.beginPath();
+            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.fillStyle = this.color;
+            this.ctx.fill();
+        }
     }
 
     start() {
@@ -557,7 +576,7 @@ class AcGamePlayground
         this.$playground = $(`
 <div class="ac-game-playground"></div>
 `);
-        
+
 
         this.$back = this.$playground.find('.ac-game-playground-item-back')
         this.start();
@@ -607,13 +626,124 @@ class AcGamePlayground
 
     }
 }
-export class AcGame {
+class Settings
+{
+    constructor(root)
+    {
+        this.root=root;
+        this.platform="WEB";
+        this.$settings = $(`
+       <div class="ac-game-settings">
+        <div class="ac-game-settings-login">
+          <div class="ac-game-settings-title">
+            登录
+          </div>"
+          <div class="ac-game-settings-username">
+            <div class="ac-game-settings-item">
+                <input type="text" placeholder="Username">
+            </div>
+          </div>
+          <div class="ac-game-settings-password">
+            <div class="ac-game-settings-item">
+                <input type="password" placeholder="Password">
+            </div>
+          </div>
+          <div class="ac-game-settings-submit">
+            <div class="ac-game-settings-item">
+                <button>登录</button>
+            </div>
+          </div>
+          <div class="ac-game-settings-error-message">
+                用户名或密码错误！
+          </div>
+          <div class="ac-game-settings-option">
+                注册
+          </div>
+         </div>
+         <br>
+         <div class="ac-game-settings-acwing">
+            <img src="https://app1619.acapp.acwing.com.cn/static/image/settings/acwing.png">
+            <div>
+                AcWingOS一键登录
+            </div>
+         </div>
+        <div class="ac-game-settings-register">
+        </div>
+       </div>
+`)
+        this.username="";
+        this.photo="";
+        if(this.root.OS) this.platform="ACAPP";
+        this.$register = this.$settings.find(".ac-game-settings-register");
+        this.$login = this.$settings.find(".ac-game-settings-login");
+        this.$register.hide();
+        this.root.$ac_game.append(this.$settings);
+        this.start()
+    }
+
+    register()
+    {
+        this.$login.hide();
+        this.$register.show();
+    }
+
+    login()
+    {
+        this.$register.hide();
+        this.$login.show();
+    }
+
+    getinfo()
+    {
+        let outer = this;
+
+        $.ajax({
+            url:"https://app1619.acapp.acwing.com.cn",
+            type:"GET",
+            date: {
+                platform:outer.root.platform,
+            },
+            success: function(resp){
+                console.log(resp);
+                if (resp.result === "success")
+                {
+                    outer.username=resp.username;
+                    outer.photo=resp.photo;
+                    outer.hide();
+                    outer.root.menu.show();
+                }
+                else
+                {
+                    outer.login();
+                }
+            }
+        })
+    }
+
+    hide()
+    {
+        this.$settings.hide();
+    }
+
+    show()
+    {
+        this.$settings.show();
+    }
+
+    start()
+    {
+        this.getinfo();
+    }
+
+
+
+}export class AcGame {
     constructor(id) {
         this.id = id;
         this.$ac_game = $('#' + id);
+        this.settings = new Settings(this);
         this.menu = new AcGameMenu(this);
         this.playground = new AcGamePlayground(this);
-
         this.start();
     }
 
