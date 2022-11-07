@@ -53,7 +53,7 @@
     user-select:none;
 }
 
-.ac-game-settings.login{
+.ac-game-settings-login{
     height: 41vh;
     width: 20vw;
     position:relative;
@@ -73,4 +73,102 @@
     transform:translate(-50%,-50%);
     background-color: rgba(0,0,0,0.7);
     border-radius: 7vh;
+}
+
+.ac-game-settings-title{
+    color: white;
+    font-size: 3vh;
+    text-align: center;
+    height: 7vh;
+    padding-top: 1vh;
+}
+
+.ac-game-settings-username{
+    display: block;
+    height: 7vh;
+}
+
+.ac-game-settings-password{
+    display: block;
+    height: 7vh;
+}
+
+.ac-game-settings-password-first{
+    display: block;
+    height: 7vh;
+}
+
+.ac-game-settings-password-second{
+    display: block;
+    height: 7vh;
+}
+
+.ac-game-settings-submit{
+  display: block;
+  height: 7vh;
+}
+
+.ac-game-settings-item{
+    width: 100%;
+    height: 100%;
+}
+
+.ac-game-settings-item > input{
+    width: 90%;
+    line-height: 3vh;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 1vh;
+}
+
+.ac-game-settings-item > button{
+  color: white;
+  background-color: royalblue;
+  width: 90%;
+  line-height: 3vh;
+  position: relative;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 1vh;
+  cursor: pointer;
+}
+
+.ac-game-settings-error-message{
+  color: red;
+  font-size: 1vh;
+  display: inline;
+  float: left;
+  padding-left: 1vw;
+}
+
+.ac-game-settings-option{
+  color: white;
+  font-size: 1.5vh;
+  display: inline;
+  float: right;
+  padding-right: 1.5vw;
+  cursor: pointer;
+}
+
+.ac-game-settings-acwing{
+  display: block;
+  height: 7vh;
+}
+
+.ac-game-settings-acwing > img{
+  position: relative;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+.ac-game-settings-acwing > div{
+  color: white;
+  font-size: 0.7vw;
+  text-align: center;
+  display: block;
 }

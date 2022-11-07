@@ -15,10 +15,10 @@ def getinfo_web(request):
     user = request.user
     if not user.is_authenticated:
         return JsonResponse({
-            'result':"未登录",
+            'result': "未登录"
         })
     else:
-        player = Player.objects.all()[0]
+        player = Player.objects.get(user=user)
         return JsonResponse({
             'result': "success",
             'username': player.user.username,
@@ -28,6 +28,8 @@ def getinfo_web(request):
 
 def getinfo(request):
     platform = request.GET.get('platform')
+    # print(platform == "WEB")
+    # print(platform)
     if platform == "ACAPP":
         return getinfo_acapp(request)
     elif platform == "WEB":
