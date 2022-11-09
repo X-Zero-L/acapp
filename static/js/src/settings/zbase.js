@@ -100,6 +100,9 @@ class Settings
 
         this.$register.hide();
         this.root.$ac_game.append(this.$settings);
+
+        this.$acwing_login = this.$settings.find(".ac-game-settings-acwing img");
+
         this.start()
     }
 
@@ -163,6 +166,7 @@ class Settings
     {
         this.add_listening_events_register();
         this.add_listening_events_login();
+        this.add_listening_events_acwing_login();
     }
 
     add_listening_events_register()
@@ -185,6 +189,32 @@ class Settings
         this.$login_submit.click(function(){
            outer.login_on_remote();
         });
+    }
+
+    add_listening_events_acwing_login()
+    {
+        let outer=this;
+
+        this.$acwing_login.click(function(){
+           outer.acwing_login();
+        });
+    }
+
+    acwing_login()
+    {
+        console.log("click acwing login");
+        $.ajax({
+            url:"https://app1619.acapp.acwing.com.cn/settings/acwing/web/apply_code/",
+            type:"GET",
+            success:function(resp){
+                console.log(resp);
+                if(resp.result==="success")
+                {
+                    window.location.replace(resp.apply_code_url);
+                    //前端页面重定向到AcWingOs申请Code的页面
+                }
+            }
+        })
     }
 
     register_on_remote()
