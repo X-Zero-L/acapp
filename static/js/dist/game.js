@@ -34,10 +34,11 @@ class AcGameMenu {
         let outer = this;
         this.$single_mode.click(function(){
             outer.hide();
-            outer.root.playground.show();
+            outer.root.playground.show("single mode");
         });
         this.$multi_mode.click(function(){
-            console.log("click multi mode");
+            outer.hide();
+            outer.root.playground.show("multi mode");
         });
         this.$settings.click(function(){
             console.log("logout");
@@ -121,28 +122,28 @@ let AC_GAME_ANIMATION = function(timestp) // timestp 是传入的一个参数，
 requestAnimationFrame(AC_GAME_ANIMATION);
 class Particle extends AcGameObject
 {
-    constructor(playground,x,y,radius,color,vx,vy,speed) {
+    constructor(playground,x, y, radius, vx, vy, color, speed, move_length) {
         super();
         this.playground = playground;
         this.ctx = this.playground.game_map.ctx;
-        this.x=x;
-        this.y=y;
-        this.radius=radius;
-        this.color=color;
-
-        this.vx=vx;
-        this.vy=vy;
-        this.speed=speed;
-
-        //this.move_length=move_length;
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.speed = speed;
+        this.move_length = move_length;
+        this.friction = 0.9;
         this.eps = 0.01;
-        this.friction=0.9;
+
     }
 
     render()
     {
+        let scale = this.playground.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x,this.y,this.radius*2,0,Math.PI*2,false);
+        this.ctx.arc(this.x*scale,this.y*scale,this.radius*scale,0,Math.PI*2,false);
         this.ctx.fillStyle=this.color;
         this.ctx.fill();
     }
@@ -165,18 +166,18 @@ class Particle extends AcGameObject
 
     update_move()
     {
-        if(this.speed<EPS*10||this.radius<EPS*10)
+        if(this.speed<this.eps||this.move_length<this.eps)
         {
             this.destroy();
             return false;
         }
-        let moved = Math.min(this.radius,this.speed*this.timedelta/1000);
+        let moved = Math.min(this.move_length,this.speed*this.timedelta/1000);
         this.x+=this.vx*moved;
         this.y+=this.vx*moved;
 
-        this.speed *= this.friction_speed;
-        this.radius *= this.friction_radius;
-        //this.move_length -=moved;
+        this.speed *= this.friction;
+        //this.radius *= this.friction_radius;
+        this.move_length -=moved;
     }
 
 }class GameMap extends AcGameObject {
@@ -197,7 +198,7 @@ class Particle extends AcGameObject
     resize() {
         this.ctx.canvas.width = this.playground.width;
         this.ctx.canvas.height = this.playground.height;
-        this.ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+        this.ctx.fillStyle = "rgba(0, 0, 0, 1)";
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
 
@@ -219,7 +220,7 @@ let GET_DIST = function(x1, y1, x2, y2)
 let EPS=0.1;
 
 class Player extends AcGameObject {
-    constructor(playground, x, y, radius, color, is_me, speed) {
+    constructor(playground, x, y, radius, color, character, speed,username,photo) {
         super(true);
 
         this.playground = playground; // 所属playground
@@ -229,11 +230,13 @@ class Player extends AcGameObject {
         this.y = y; // 坐标
         this.radius = radius; // 半径
         this.color = color; // 颜色
-        this.is_me = is_me; // 玩家类型
-        if(this.is_me)
+        this.character = character; // 玩家类型
+        this.username=username;
+        this.photo = photo;
+        if(this.character!== "robot")
         {
             this.img = new Image();
-            this.img.src = this.playground.root.settings.photo;
+            this.img.src = this.photo;
         }
         this.vx = 0;
         this.vy = 0;
@@ -259,10 +262,10 @@ class Player extends AcGameObject {
             let ee = e.which; // e.which是鼠标对应点击的值
             if (ee === 3) // 右键
             {
-                outer.move_to(e.clientX-rect.left, e.clientY-rect.top);//分别为鼠标点击处的x坐标和y坐标
+                outer.move_to((e.clientX-rect.left)/outer.playground.scale, (e.clientY-rect.top)/outer.playground.scale);//分别为鼠标点击处的x坐标和y坐标
             } else if (ee === 1) {
                 if (outer.cur_skill === "fireball") {
-                    outer.shoot_fireball(e.clientX-rect.left, e.clientY-rect.top);
+                    outer.shoot_fireball((e.clientX-rect.left)/outer.playground.scale, (e.clientY-rect.top)/outer.playground.scale);
                     return false;
                 }
                 outer.cur_skill = null;//点击之后清空
@@ -283,13 +286,13 @@ class Player extends AcGameObject {
     shoot_fireball(tx, ty) {
         //console.log(tx, ty);
         let x = this.x, y = this.y;
-        let radius = this.playground.height * 0.01;
+        let radius = 0.01;
         let color = "orange";
-        let damage = this.playground.height * 0.01;
+        let damage = 0.01;
         let angle = Math.atan2(ty - y, tx - x);
         let vx = Math.cos(angle), vy = Math.sin(angle);
-        let speed = this.playground.height * 0.5;
-        let move_dist = this.playground.height * 1;
+        let speed = 0.5;
+        let move_dist = 1.0;
 
         new Fireball(this.playground, this, x, y, radius, color, damage, vx, vy, speed, move_dist);
     }
@@ -315,23 +318,25 @@ class Player extends AcGameObject {
     }
 
     explode_particle() {
-        for (let i = 0; i < 10 + Math.random() * 5; ++i) {
+        for (let i = 0; i < 200 + Math.random() * 10; i ++ ) {
             let x = this.x, y = this.y;
-            let radius = this.radius / 3;
-            let angle = Math.PI * 2 * Math.random();//随机方向粒子爆发
+            //let x=this.x+(2*Math.random()-1)*this.radius;
+            //let y=Math.sqrt(this.radius*this.radius-(x-this.x)*(x-this.x));
+            let radius = this.radius * Math.random() * 0.1;
+            let angle = Math.PI * 2 * Math.random();
             let vx = Math.cos(angle), vy = Math.sin(angle);
-            //let color = this.color;
-            let color = GET_RANDOM_COLOR();
+            //let vx=2*Math.random()-1;
+            //let vy=2*Math.random()-1;
+            let color = this.color;
             let speed = this.speed * 10;
-
-            new Particle(this.playground, x, y, radius, color, vx, vy, speed);//粒子对象创建
-
-
+            let move_length = this.radius * Math.random() * 5;
+            new Particle(this.playground, x, y, radius, vx, vy, color, speed, move_length);
         }
+
     }
 
     is_died() {
-        if (this.radius < EPS * 10) {
+        if (this.radius < EPS*0.1) {
             this.destroy();
             return true;
         }
@@ -352,28 +357,29 @@ class Player extends AcGameObject {
     }
 
     render() {
-        if(this.is_me)
+        let scale = this.playground.scale;
+        if(this.character!="robot")
         {
             this.ctx.save();
             this.ctx.beginPath();
-            this.ctx.arc(this.x,this.y,this.radius,0,Math.PI*2,false);
+            this.ctx.arc(this.x*scale,this.y*scale,this.radius*scale,0,Math.PI*2,false);
             this.lineWidth = EPS*10;
             this.ctx.stroke();
             this.ctx.clip();
-            this.ctx.drawImage(this.img,this.x-this.radius,this.y-this.radius,this.radius*2,this.radius*2);
+            this.ctx.drawImage(this.img,(this.x-this.radius)*scale,(this.y-this.radius)*scale,this.radius*2*scale,this.radius*2*scale);
             this.ctx.restore();
         }
         else
         {
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x*scale, this.y*scale, this.radius*scale, 0, Math.PI * 2, false);
             this.ctx.fillStyle = this.color;
             this.ctx.fill();
         }
     }
 
     start() {
-        if (this.is_me) {
+        if (this.character!="robot") {
             this.add_listening_events();
         }
         this.cold_time = 5;
@@ -388,7 +394,7 @@ class Player extends AcGameObject {
     }
 
     update_AI() {
-        if (this.is_me) return false;
+        if (this.character!="robot") return false;
 
         this.update_AI_move();
         if (!this.update_AI_cold_time()) return false;
@@ -418,8 +424,8 @@ class Player extends AcGameObject {
     {
         if(this.move_length<EPS)
         {
-            let tx = Math.random()*this.playground.width;
-            let ty = Math.random()*this.playground.height;
+            let tx = Math.random()*this.playground.width/this.playground.scale;
+            let ty = Math.random()*this.playground.height/this.playground.scale;
             this.move_to(tx,ty);
         }
     }
@@ -475,7 +481,6 @@ let IS_COLLISION = function (obj1,obj2)
 
 class Fireball extends AcGameObject {
     constructor(playground, player, x, y, radius, color, damage, vx, vy, speed, move_dist) {
-        // 有些步骤前面重复过，这里不再赘述
         super(true);
         this.playground = playground;
         this.player = player;
@@ -518,8 +523,9 @@ class Fireball extends AcGameObject {
     }
 
     render() {
+        let scale = this.playground.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x*scale, this.y*scale, this.radius*scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
@@ -578,8 +584,11 @@ class AcGamePlayground
 <div class="ac-game-playground"></div>
 `);
 
-
+        this.root.$ac_game.append(this.$playground);
         this.$back = this.$playground.find('.ac-game-playground-item-back')
+        this.width = this.$playground.width;
+        this.height = this.$playground.height;
+        this.scale = this.height;
         this.start();
     }
 
@@ -593,21 +602,19 @@ class AcGamePlayground
     }
 
 
-    show()
+    show(mode)
     {
         this.$playground.show();
-        this.root.$ac_game.append(this.$playground);
-
-        this.width = this.$playground.width();
-        this.height = this.$playground.height();
-
+        this.resize();
         this.game_map = new GameMap(this); // 创建一个地图
         this.players = []; // 创建一个用于储存玩家的数组
+        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "red", "me", 0.15,this.root.settings.username,this.root.settings.photo));
+        if(mode==="single mode") {
+            for (let i = 0; i < 5; ++i) {
+                this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, GET_RANDOM_COLOR(), "robot", 0.15))
+            }
+        }else if(mode==="multi mode"){
 
-        this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, "red", true, this.height * 0.15));
-        for(let i=0;i<5;++i)
-        {
-            this.players.push(new Player(this,this.width / 2,this.height/2,this.height*0.05,GET_RANDOM_COLOR(),false,this.height*0.15))
         }
     }
 
@@ -620,11 +627,27 @@ class AcGamePlayground
     {
         this.hide();
         this.add_listening_events();
+        let outer = this;
+        $(window).resize(function (){
+            outer.resize();
+        })
     }
 
     update()
     {
 
+    }
+
+    resize() {
+        this.width = this.$playground.width();
+        this.height = this.$playground.height();
+        let unit = Math.min(this.width/16,this.height/9);
+        this.width = unit*16;
+        this.height = unit*9;
+
+        this.scale = this.height;
+
+        if(this.game_map) this.game_map.resize();
     }
 }
 class Settings

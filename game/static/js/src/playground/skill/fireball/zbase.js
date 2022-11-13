@@ -5,7 +5,6 @@ let IS_COLLISION = function (obj1,obj2)
 
 class Fireball extends AcGameObject {
     constructor(playground, player, x, y, radius, color, damage, vx, vy, speed, move_dist) {
-        // 有些步骤前面重复过，这里不再赘述
         super(true);
         this.playground = playground;
         this.player = player;
@@ -48,8 +47,9 @@ class Fireball extends AcGameObject {
     }
 
     render() {
+        let scale = this.playground.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x*scale, this.y*scale, this.radius*scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }

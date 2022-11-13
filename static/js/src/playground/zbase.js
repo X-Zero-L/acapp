@@ -19,8 +19,11 @@ class AcGamePlayground
 <div class="ac-game-playground"></div>
 `);
 
-
+        this.root.$ac_game.append(this.$playground);
         this.$back = this.$playground.find('.ac-game-playground-item-back')
+        this.width = this.$playground.width;
+        this.height = this.$playground.height;
+        this.scale = this.height;
         this.start();
     }
 
@@ -34,21 +37,19 @@ class AcGamePlayground
     }
 
 
-    show()
+    show(mode)
     {
         this.$playground.show();
-        this.root.$ac_game.append(this.$playground);
-
-        this.width = this.$playground.width();
-        this.height = this.$playground.height();
-
+        this.resize();
         this.game_map = new GameMap(this); // 创建一个地图
         this.players = []; // 创建一个用于储存玩家的数组
+        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "red", "me", 0.15,this.root.settings.username,this.root.settings.photo));
+        if(mode==="single mode") {
+            for (let i = 0; i < 5; ++i) {
+                this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, GET_RANDOM_COLOR(), "robot", 0.15))
+            }
+        }else if(mode==="multi mode"){
 
-        this.players.push(new Player(this, this.width / 2, this.height / 2, this.height * 0.05, "red", true, this.height * 0.15));
-        for(let i=0;i<5;++i)
-        {
-            this.players.push(new Player(this,this.width / 2,this.height/2,this.height*0.05,GET_RANDOM_COLOR(),false,this.height*0.15))
         }
     }
 
@@ -61,10 +62,26 @@ class AcGamePlayground
     {
         this.hide();
         this.add_listening_events();
+        let outer = this;
+        $(window).resize(function (){
+            outer.resize();
+        })
     }
 
     update()
     {
 
+    }
+
+    resize() {
+        this.width = this.$playground.width();
+        this.height = this.$playground.height();
+        let unit = Math.min(this.width/16,this.height/9);
+        this.width = unit*16;
+        this.height = unit*9;
+
+        this.scale = this.height;
+
+        if(this.game_map) this.game_map.resize();
     }
 }
