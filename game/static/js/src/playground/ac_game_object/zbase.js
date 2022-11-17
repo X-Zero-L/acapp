@@ -10,6 +10,16 @@ class AcGameObject
         this.timedelta = 0; // 当前距离上一帧的时间间隔，相等于时间微分，用来防止因为不同浏览器不同的帧数，物体移动若按帧算会不同，所以要用统一的标准，就要用时间来衡量
 
         this.hurtable = hurtable; // 决定这个元素能否被碰撞，默认为不能
+        this.uuid = this.create_uuid();
+    }
+
+    create_uuid(){
+        let res="";
+        for(let i=0;i<8;i++){
+            let x=parseInt(Math.floor(Math.random()*10));
+            res+=x;
+        }
+        return res;
     }
 
     start()

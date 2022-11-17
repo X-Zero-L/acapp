@@ -49,7 +49,12 @@ class Player extends AcGameObject {
             let ee = e.which; // e.which是鼠标对应点击的值
             if (ee === 3) // 右键
             {
-                outer.move_to((e.clientX-rect.left)/outer.playground.scale, (e.clientY-rect.top)/outer.playground.scale);//分别为鼠标点击处的x坐标和y坐标
+                let tx=(e.clientX-rect.left)/outer.playground.scale;
+                let ty=(e.clientY-rect.top)/outer.playground.scale;
+                outer.move_to(tx,ty);//分别为鼠标点击处的x坐标和y坐标
+                if(outer.playground.mode==="multi mode") {  // 在多人模式中，需要同时向后端发送自己对应的移动信息
+                    outer.playground.mps.send_move_to(tx,ty);
+                }
             } else if (ee === 1) {
                 if (outer.cur_skill === "fireball") {
                     outer.shoot_fireball((e.clientX-rect.left)/outer.playground.scale, (e.clientY-rect.top)/outer.playground.scale);
@@ -166,7 +171,7 @@ class Player extends AcGameObject {
     }
 
     start() {
-        if (this.character!="robot") {
+        if (this.character==="me") {
             this.add_listening_events();
         }
         this.cold_time = 5;
@@ -219,7 +224,7 @@ class Player extends AcGameObject {
 
     update_move() // 将移动单独写为一个过程
     {
-        if (this.speed_damage&&this.speed_damage>EPS)
+        if (this.speed_damage&&this.speed_damage>this.eps)
         {
             this.vx=this.vy=0;
             this.move_length=0;
@@ -228,7 +233,7 @@ class Player extends AcGameObject {
             this.speed_damage*=this.friction_damage;
         }
 
-        if (this.move_length < EPS) // 移动距离没了（小于精度）
+        if (this.move_length < this.eps) // 移动距离没了（小于精度）
         {
             //console.log(this.x,this.y);
             this.move_length = 0; // 全都停下了

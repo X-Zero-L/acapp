@@ -65,6 +65,16 @@ class AcGameObject
         this.timedelta = 0; // 当前距离上一帧的时间间隔，相等于时间微分，用来防止因为不同浏览器不同的帧数，物体移动若按帧算会不同，所以要用统一的标准，就要用时间来衡量
 
         this.hurtable = hurtable; // 决定这个元素能否被碰撞，默认为不能
+        this.uuid = this.create_uuid();
+    }
+
+    create_uuid(){
+        let res="";
+        for(let i=0;i<8;i++){
+            let x=parseInt(Math.floor(Math.random()*10));
+            res+=x;
+        }
+        return res;
     }
 
     start()
@@ -262,7 +272,12 @@ class Player extends AcGameObject {
             let ee = e.which; // e.which是鼠标对应点击的值
             if (ee === 3) // 右键
             {
-                outer.move_to((e.clientX-rect.left)/outer.playground.scale, (e.clientY-rect.top)/outer.playground.scale);//分别为鼠标点击处的x坐标和y坐标
+                let tx=(e.clientX-rect.left)/outer.playground.scale;
+                let ty=(e.clientY-rect.top)/outer.playground.scale;
+                outer.move_to(tx,ty);//分别为鼠标点击处的x坐标和y坐标
+                if(outer.playground.mode==="multi mode") {  // 在多人模式中，需要同时向后端发送自己对应的移动信息
+                    outer.playground.mps.send_move_to(tx,ty);
+                }
             } else if (ee === 1) {
                 if (outer.cur_skill === "fireball") {
                     outer.shoot_fireball((e.clientX-rect.left)/outer.playground.scale, (e.clientY-rect.top)/outer.playground.scale);
@@ -318,7 +333,7 @@ class Player extends AcGameObject {
     }
 
     explode_particle() {
-        for (let i = 0; i < 200 + Math.random() * 10; i ++ ) {
+        for (let i = 0; i < 20 + Math.random() * 10; i ++ ) {
             let x = this.x, y = this.y;
             //let x=this.x+(2*Math.random()-1)*this.radius;
             //let y=Math.sqrt(this.radius*this.radius-(x-this.x)*(x-this.x));
@@ -379,7 +394,7 @@ class Player extends AcGameObject {
     }
 
     start() {
-        if (this.character!="robot") {
+        if (this.character==="me") {
             this.add_listening_events();
         }
         this.cold_time = 5;
@@ -432,7 +447,7 @@ class Player extends AcGameObject {
 
     update_move() // 将移动单独写为一个过程
     {
-        if (this.speed_damage&&this.speed_damage>EPS)
+        if (this.speed_damage&&this.speed_damage>this.eps)
         {
             this.vx=this.vy=0;
             this.move_length=0;
@@ -441,7 +456,7 @@ class Player extends AcGameObject {
             this.speed_damage*=this.friction_damage;
         }
 
-        if (this.move_length < EPS) // 移动距离没了（小于精度）
+        if (this.move_length < this.eps) // 移动距离没了（小于精度）
         {
             //console.log(this.x,this.y);
             this.move_length = 0; // 全都停下了
@@ -563,6 +578,80 @@ class Fireball extends AcGameObject {
         this.y += this.vy * moved;
         this.move_dist -= moved;
     }
+}class MultiPlayerSocket{
+    constructor(playground)
+    {
+        this.playground = playground;
+        this.ws = new WebSocket("wss://app1619.acapp.acwing.com.cn/wss/multiplayer/");
+        this.start();
+    }
+    start(){
+        this.reveive();
+    }
+
+    reveive(){  //监听ws传输的信息
+        let outer = this;
+        this.ws.onmessage = function (e) {
+            let data = JSON.parse(e.data);
+            let uuid = data.uuid;
+            if (uuid === outer.uuid) return false;
+
+            let event = data.event;
+            if (event === "create_player") {
+                outer.receive_create_player(uuid,data.username,data.photo);
+            }
+            else if(event === "move_to") {
+                console.log("接收到其他玩家的移动信息！");
+                outer.receive_move_to(uuid,data.tx,data.ty);
+            }
+        }
+    }
+
+
+    send_move_to(tx,ty) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event':'move_to',
+            'uuid':outer.uuid,
+            'tx':tx,
+            'ty':ty,
+        }));
+    }
+
+    get_player(uuid) {
+        let players = this.playground.players;
+        for(let i = 0;i<players.length;i++){
+            let player = players[i];
+            if(player.uuid===uuid){
+                return player;
+            }
+        }
+        return null;
+    }
+
+    receive_move_to(uuid,tx,ty){
+        let player = this.get_player(uuid);
+        if(player){
+            player.move_to(tx,ty);
+        }
+    }
+
+    send_create_player(username,photo){
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event':'create_player',
+            'uuid':outer.uuid,
+            'username':username,
+            'photo':photo,
+        }));
+    }
+
+    receive_create_player(uuid,username,photo){
+        let player = new Player(this.playground, this.playground.width / 2 / this.playground.scale, 0.5, 0.05, "white", "enemy", 0.15,username,photo);
+        player.uuid = uuid;
+        this.playground.players.push(player);
+        console.log("success create a enemy!!!");
+    }
 }let HEX = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
 
 let GET_RANDOM_COLOR = function (){
@@ -589,6 +678,7 @@ class AcGamePlayground
         this.width = this.$playground.width;
         this.height = this.$playground.height;
         this.scale = this.height;
+        //this.uuid = this.create_uuid();
         this.start();
     }
 
@@ -610,11 +700,20 @@ class AcGamePlayground
         this.players = []; // 创建一个用于储存玩家的数组
         this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "red", "me", 0.15,this.root.settings.username,this.root.settings.photo));
         if(mode==="single mode") {
-            for (let i = 0; i < 5; ++i) {
+            for (let i = 0; i < 20; ++i) {
                 this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, GET_RANDOM_COLOR(), "robot", 0.15))
             }
-        }else if(mode==="multi mode"){
-
+            console.log(mode);
+        }
+        else if(mode==="multi mode"){
+            this.mps = new MultiPlayerSocket(this);
+            this.mps.uuid = this.players[0].uuid;
+            let outer = this;
+            this.mps.ws.onopen = function (){
+                outer.mps.send_create_player(outer.root.settings.username,outer.root.settings.photo);
+            };
+            console.log(mode);
+            this.mode=mode;
         }
     }
 
@@ -649,6 +748,7 @@ class AcGamePlayground
 
         if(this.game_map) this.game_map.resize();
     }
+
 }
 class Settings
 {

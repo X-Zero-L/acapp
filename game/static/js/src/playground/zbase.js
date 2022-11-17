@@ -24,6 +24,7 @@ class AcGamePlayground
         this.width = this.$playground.width;
         this.height = this.$playground.height;
         this.scale = this.height;
+        //this.uuid = this.create_uuid();
         this.start();
     }
 
@@ -45,11 +46,20 @@ class AcGamePlayground
         this.players = []; // 创建一个用于储存玩家的数组
         this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "red", "me", 0.15,this.root.settings.username,this.root.settings.photo));
         if(mode==="single mode") {
-            for (let i = 0; i < 5; ++i) {
+            for (let i = 0; i < 20; ++i) {
                 this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, GET_RANDOM_COLOR(), "robot", 0.15))
             }
-        }else if(mode==="multi mode"){
-
+            console.log(mode);
+        }
+        else if(mode==="multi mode"){
+            this.mps = new MultiPlayerSocket(this);
+            this.mps.uuid = this.players[0].uuid;
+            let outer = this;
+            this.mps.ws.onopen = function (){
+                outer.mps.send_create_player(outer.root.settings.username,outer.root.settings.photo);
+            };
+            console.log(mode);
+            this.mode=mode;
         }
     }
 
@@ -84,4 +94,5 @@ class AcGamePlayground
 
         if(this.game_map) this.game_map.resize();
     }
+
 }
