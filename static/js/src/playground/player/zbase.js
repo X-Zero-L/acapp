@@ -87,15 +87,15 @@ class Player extends AcGameObject {
             }
         });
 
-        $(window).keydown(function (e) {
+        this.playground.game_map.$canvas.keydown(function (e) {
             if(outer.playground.state!=="fighting")
-                return false;
-            if(outer.fireball_coldtime>=outer.eps)
                 return false;
             if (!outer.is_alive) return false;
             let ee = e.which;
             if (ee === 81) //81是Q的key-code
             {
+                if(outer.fireball_coldtime>=outer.eps)
+                    return true;
                 outer.cur_skill = "fireball";
                 return false;
             }
@@ -103,6 +103,18 @@ class Player extends AcGameObject {
                 if(outer.blink_coldtime>=outer.eps) return true;
                 outer.cur_skill="blink";
                 return false;
+            }
+            else if(ee===13){
+                if (outer.playground.mode==="multi mode") {
+                    outer.playground.chat_field.show_input();
+                    return false;
+                }
+            }
+            else if(ee===27){
+                if (outer.playground.mode==="multi mode"){
+                    outer.playground.chat_field.hide_input();
+                    return false;
+                }
             }
         });
     }

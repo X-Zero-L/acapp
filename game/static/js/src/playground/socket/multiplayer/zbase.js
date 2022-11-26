@@ -37,6 +37,10 @@ class MultiPlayerSocket{
                 console.log("有玩家使用了闪现！！！");
                 outer.receive_blink(uuid,data.tx,data.ty);
             }
+            else if(event==="message"){
+                console.log("有玩家发送了信息！！！");
+                outer.receive_message(data.username,data.text);
+            }
         }
     }
 
@@ -142,5 +146,19 @@ class MultiPlayerSocket{
         if (player) {
             player.blink(tx, ty);
         }
+    }
+
+    send_message(text){
+        let outer=this;
+        this.ws.send(JSON.stringify({
+            'event':"message",
+            'uuid':outer.uuid,
+            'username':outer.playground.root.settings.username,
+            'text':text,
+        }));
+    }
+
+    receive_message(username,text){
+        this.playground.chat_field.add_message(username,text);
     }
 }
