@@ -43,6 +43,9 @@ class AcGamePlayground
         this.$playground.show();
         this.resize();
         this.game_map = new GameMap(this); // 创建一个地图
+        this.state="waiting";
+        this.notice_board=new NoticeBoard(this);
+        this.player_count=0;
         this.players = []; // 创建一个用于储存玩家的数组
         this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "red", "me", 0.15,this.root.settings.username,this.root.settings.photo));
         if(mode==="single mode") {

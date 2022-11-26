@@ -32,6 +32,7 @@ class Fireball extends AcGameObject {
 
     hit(obj) // 碰撞
     {
+
         obj.is_attacked(this); // obj被this攻击了
         this.is_attacked(obj); // this被obj攻击了
     }
@@ -59,7 +60,9 @@ class Fireball extends AcGameObject {
     }
 
     update() {
-        this.update_attack();
+        if(this.player.character!=="enemy") { // 火球的碰撞只在发射方进行检测，实现统一
+            this.update_attack();
+        }
         this.update_move();
         this.render();
     }
@@ -69,6 +72,10 @@ class Fireball extends AcGameObject {
             let obj = AC_GAME_OBJECTS[i];
             if (this.is_satisfy_collision(obj)) // 如果真的碰撞了（这样可以保证碰撞条件可以自行定义，以后会很好维护）
             {
+                if(this.playground.mode==="multi mode"){//多人模式中，向其他玩家发送某个obj被这个小球击中的信息
+                    let angle = Math.atan2(obj.y - this.y, obj.x - this.x);
+                    this.playground.mps.send_attack(obj.uuid,obj.x,obj.y,angle,this.damage,this.uuid);
+                }
                 this.hit(obj); // 两个物体碰撞了
                 break; // 火球，只能碰到一个物体
             }
@@ -86,5 +93,17 @@ class Fireball extends AcGameObject {
         this.x += this.vx * moved;
         this.y += this.vy * moved;
         this.move_dist -= moved;
+    }
+
+    on_destroy() {
+        let fireballs = this.player.fireballs;
+        for(let i = 0 ; i <fireballs.length;i++)
+        {
+            if(fireballs[i]===this)
+            {
+                fireballs.splice(i,1);
+                break;
+            }
+        }
     }
 }
