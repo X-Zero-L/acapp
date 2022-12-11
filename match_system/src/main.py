@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import glob
 import sys
 sys.path.insert(0, glob.glob('../../')[0])
@@ -42,7 +44,7 @@ class Pool:
         b_max_dif = b.waiting_time * 50
         return dt <= a_max_dif and dt <= b_max_dif
 
-    def match_success(self, ps): # 匹配系统成功匹配到消息后，会将匹配结果发送给group内的
+    def match_success(self, ps):
         print("Match Success: %s %s %s" % (ps[0].username, ps[1].username, ps[2].username))
         room_name = "room-%s-%s-%s" % (ps[0].uuid, ps[1].uuid, ps[2].uuid)
         players = []
