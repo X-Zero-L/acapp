@@ -3,16 +3,25 @@ import json
 from django.conf import settings
 from django.core.cache import cache
 
+from thrift import Thrift
+from thrift.transport import TSocket
+from thrift.transport import TTransport
+from thrift.protocol import TBinaryProtocol
+
+from match_system.src.match_server.match_service import Match
+from game.models.player.player import Player
+from channels.db import database_sync_to_async
 
 class MultiPlayer(AsyncWebsocketConsumer):
     async def connect(self):  # 和前端连接时触发的函数
+        '''
         self.room_name = None
         for i in range(1000):
             name = "room-%d" % (i)
 
             if not cache.has_key(name) or len(cache.get(name)) < settings.ROOM_CAPACITY:
                 self.room_name = name
-                break;
+                break
 
         if not self.room_name:
             return
@@ -32,30 +41,40 @@ class MultiPlayer(AsyncWebsocketConsumer):
             }))
 
         await self.channel_layer.group_add(self.room_name, self.channel_name)
+        '''
+        await self.accept()
 
     async def disconnect(self, close_code):  # 断开连接时触发的函数
         print('disconnect')
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
     async def create_player(self, data):  # 将某玩家信息存入对应房间中
-        players = cache.get(self.room_name)
-        players.append({
-            'uuid': data['uuid'],
-            'username': data['username'],
-            'photo': data['photo'],
-        })
-        cache.set(self.room_name, players, 3600)
-        # 将这个玩家的信息群发至其他玩家的后端ws
-        await self.channel_layer.group_send(
-            self.room_name,
-            {
-                'type': "group_create_player",  # 群发后，接收到的ws后端触发的对应函数名
-                'event': "create_player",
-                'uuid': data['uuid'],
-                'username': data['username'],
-                'photo': data['photo'],
-            }
-        )
+        self.room_name = None
+        self.uuid = data['uuid']
+        # Make socket
+        transport = TSocket.TSocket('127.0.0.1', 9090)
+        # Buffering is critical. Raw sockets are very slow
+        transport = TTransport.TBufferedTransport(transport)
+
+        # Wrap in a protocol
+        protocol = TBinaryProtocol.TBinaryProtocol(transport)
+
+        # Create a client to use the protocol encoder
+        client = Match.Client(protocol)
+
+        def db_get_player():
+            return Player.objects.get(user__username=data['username'])
+
+        player = await database_sync_to_async(db_get_player)()
+
+        # Connect!
+        transport.open()
+
+        # 向匹配服务发送信息，添加一个玩家进入消息队列
+        client.add_player(player.score, data['uuid'], data['username'], data['photo'], self.channel_name)
+
+        # Close!
+        transport.close()
 
     async def group_create_player(self, data):
         await self.send(text_data=json.dumps(data))
@@ -74,6 +93,10 @@ class MultiPlayer(AsyncWebsocketConsumer):
         )
 
     async def group_send_event(self, data):
+        if not self.room_name:  # room_name起到分组作用，在匹配系统中，匹配成功后room_name就已经被生成，在这里进行获取，才能对后面从前端接收到的信息分组发送到对应的房间 
+            keys = cache.keys('*%s*' % (self.uuid))
+            if keys:
+                self.room_name = keys[0]
         await self.send(text_data=json.dumps(data))
 
     async def shoot_fireball(self, data):
@@ -90,6 +113,34 @@ class MultiPlayer(AsyncWebsocketConsumer):
         )
 
     async def attack(self,data):
+        if not self.room_name:
+            return
+        players = cache.get(self.room_name)
+        if not players:
+            return
+        for player in players:
+            if player['uuid']==data['attackee_uuid']:
+                player['hp']-=25
+        
+        remain_cnt = 0
+        for player in players:
+            if player['hp']>0:
+                remain_cnt += 1
+        
+        if remain_cnt >1 :
+            if self.room_name:
+                cache.set(self.room_name,players,3600)
+        else:
+            def db_update_player_score(username,score):
+                player = Player.objects.get(user__username=username)
+                player.score += score
+                player.save()
+            for player in players:
+                if player['hp']<=0:
+                    await database_sync_to_async(db_update_player_score)(player['username'],-5)
+                else:
+                    await database_sync_to_async(db_update_player_score)(player['username'],10)
+
         await self.channel_layer.group_send(
             self.room_name,
             {
@@ -121,7 +172,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_name,
             {
-                'type':"group.send_event",
+                'type':"group_send_event",
                 'event':"message",
                 'uuid':data['uuid'],
                 'username':data['username'],
@@ -129,7 +180,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
             }
         )
 
-    async def receive(self, text_data):  # text_data是从前端send过来的数据
+    async def receive(self, text_data):
         data = json.loads(text_data)
         event = data['event']
         if event == "create_player":

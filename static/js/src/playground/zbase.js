@@ -45,6 +45,7 @@ class AcGamePlayground
         this.game_map = new GameMap(this); // 创建一个地图
         this.state="waiting";
         this.notice_board=new NoticeBoard(this);
+        this.score_board = new ScoreBoard(this);
         this.player_count=0;
         this.players = []; // 创建一个用于储存玩家的数组
         this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "red", "me", 0.15,this.root.settings.username,this.root.settings.photo));
@@ -69,17 +70,48 @@ class AcGamePlayground
 
     hide()
     {
+        //清空所有游戏元素
+        while (this.players && this.players.length > 0) {
+            this.players[0].destroy();
+        }
+        if (this.game_map) {
+            this.game_map.destroy();
+            this.game_map = null;
+        }
+        if (this.notice_board) {
+            this.notice_board.destroy();
+            this.notice_board = null;
+        }
+        if (this.score_board) {
+            this.score_board.destroy();
+            this.score_board = null;
+        }
+        this.$playground.empty();   //清空所有html标签
         this.$playground.hide();
+    }
+
+    create_uuid() {
+        let res = "";
+        for (let i = 0; i < 8; i ++ ) {
+            let x = parseInt(Math.floor(Math.random() * 10));   //[0, 10)
+            res += x;
+        }
+        return res;
     }
 
     start()
     {
-        this.hide();
-        this.add_listening_events();
         let outer = this;
-        $(window).resize(function (){
+        let uuid = this.create_uuid();
+        $(window).on(`resize.${uuid}`, function() {
             outer.resize();
-        })
+        });
+
+        if (this.root.OS) {
+            outer.root.OS.api.window.on_close(function() {
+                $(window).off(`resize.${uuid}`);
+            });
+        }
     }
 
     update()

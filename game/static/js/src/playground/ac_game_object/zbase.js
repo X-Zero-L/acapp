@@ -45,6 +45,10 @@ class AcGameObject
              }
         }
     }
+    late_update()
+    {
+
+    }
 
     on_destroy()
     {
@@ -68,6 +72,10 @@ let AC_GAME_ANIMATION = function(timestp) // timestp 是传入的一个参数，
             obj.timedelta = timestp - last_timestp; // 时间微分
             obj.update(); // 不断调用
         }
+    }
+    for (let i = 0; i < AC_GAME_OBJECTS.length; i ++ ) {
+        let obj = AC_GAME_OBJECTS[i];
+        obj.late_update();
     }
     last_timestp = timestp; // 进入下一帧时当前时间戳就是这一帧的时间戳
 

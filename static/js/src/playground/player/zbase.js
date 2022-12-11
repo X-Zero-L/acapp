@@ -304,6 +304,7 @@ class Player extends AcGameObject {
     update() {
         //this.x+=this.vx;
         //this.y+=this.vy;
+        this.update_win();
         this.update_move();
         if(this.character==="me"&&this.playground.state==="fighting")
         {
@@ -312,7 +313,13 @@ class Player extends AcGameObject {
         this.render();
         this.update_AI();
     }
-
+    update_win() {
+        // 竞赛状态，且只有一名玩家，且改名玩家就是我，则胜利
+        if (this.playground.state === "fighting" && this.character === "me" && this.playground.players.length === 1) {
+            this.playground.state = "over";
+            this.playground.score_board.win();
+        }
+    }
     update_coldtime(){
         this.fireball_coldtime-=this.timedelta/1000;
         this.fireball_coldtime=Math.max(0,this.fireball_coldtime);
@@ -391,6 +398,10 @@ class Player extends AcGameObject {
 
     on_destroy() // 死之前在this.playground.players数组里面删掉这个player
     {
+        if (this.character === "me" && this.playground.state === "fighting") {
+            this.playground.state = "over"
+            this.playground.score_board.lose();
+        }
         this.is_alive = false; // 已经去世了
         for (let i = 0; i < this.playground.players.length; ++ i)
         {
