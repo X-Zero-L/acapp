@@ -5,10 +5,7 @@ from random import randint
 
 
 def get_state():
-    res = ""
-    for i in range(8):
-        res += str(randint(0, 9))
-    return res
+    return "".join(str(randint(0, 9)) for _ in range(8))
 
 
 def apply_code(request):

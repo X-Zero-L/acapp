@@ -94,8 +94,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
 
     async def group_send_event(self, data):
         if not self.room_name:  # room_name起到分组作用，在匹配系统中，匹配成功后room_name就已经被生成，在这里进行获取，才能对后面从前端接收到的信息分组发送到对应的房间 
-            keys = cache.keys('*%s*' % (self.uuid))
-            if keys:
+            if keys := cache.keys(f'*{self.uuid}*'):
                 self.room_name = keys[0]
         await self.send(text_data=json.dumps(data))
 

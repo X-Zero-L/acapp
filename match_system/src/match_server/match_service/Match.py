@@ -83,8 +83,7 @@ class Client(Iface):
 class Processor(Iface, TProcessor):
     def __init__(self, handler):
         self._handler = handler
-        self._processMap = {}
-        self._processMap["add_player"] = Processor.process_add_player
+        self._processMap = {"add_player": Processor.process_add_player}
         self._on_message_begin = None
 
     def on_message_begin(self, func):
@@ -97,7 +96,9 @@ class Processor(Iface, TProcessor):
         if name not in self._processMap:
             iprot.skip(TType.STRUCT)
             iprot.readMessageEnd()
-            x = TApplicationException(TApplicationException.UNKNOWN_METHOD, 'Unknown function %s' % (name))
+            x = TApplicationException(
+                TApplicationException.UNKNOWN_METHOD, f'Unknown function {name}'
+            )
             oprot.writeMessageBegin(name, TMessageType.EXCEPTION, seqid)
             x.write(oprot)
             oprot.writeMessageEnd()
@@ -225,7 +226,7 @@ class add_player_args(object):
     def __repr__(self):
         L = ['%s=%r' % (key, value)
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -263,11 +264,8 @@ class add_player_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 0:
-                if ftype == TType.I32:
-                    self.success = iprot.readI32()
-                else:
-                    iprot.skip(ftype)
+            if fid == 0 and ftype == TType.I32:
+                self.success = iprot.readI32()
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -291,7 +289,7 @@ class add_player_result(object):
     def __repr__(self):
         L = ['%s=%r' % (key, value)
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__

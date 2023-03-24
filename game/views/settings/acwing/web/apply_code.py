@@ -5,10 +5,7 @@ from random import randint
 
 
 def get_state():
-    res = ""
-    for i in range(8):
-        res += str(randint(0, 9))
-    return res
+    return "".join(str(randint(0, 9)) for _ in range(8))
 
 
 def apply_code(request):
@@ -21,8 +18,9 @@ def apply_code(request):
 
     apply_code_url = "https://www.acwing.com/third_party/api/oauth2/web/authorize/"
 
-    return JsonResponse({  # 返回请求
-        'result': "success",  # 测试
-        'apply_code_url': apply_code_url + "?appid=%s&redirect_uri=%s&scope=%s&state=%s" % (
-            appid, redirect_uri, scope, state)
-    })
+    return JsonResponse(
+        {
+            'result': "success",
+            'apply_code_url': f"{apply_code_url}?appid={appid}&redirect_uri={redirect_uri}&scope={scope}&state={state}",
+        }
+    )

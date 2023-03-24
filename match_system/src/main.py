@@ -45,8 +45,8 @@ class Pool:
         return dt <= a_max_dif and dt <= b_max_dif
 
     def match_success(self, ps):
-        print("Match Success: %s %s %s" % (ps[0].username, ps[1].username, ps[2].username))
-        room_name = "room-%s-%s-%s" % (ps[0].uuid, ps[1].uuid, ps[2].uuid)
+        print(f"Match Success: {ps[0].username} {ps[1].username} {ps[2].username}")
+        room_name = f"room-{ps[0].uuid}-{ps[1].uuid}-{ps[2].uuid}"
         players = []
         for p in ps:
             async_to_sync(channel_layer.group_add)(room_name, p.channel_name)
@@ -109,8 +109,7 @@ def get_player_from_queue():
 def worker():
     pool = Pool()
     while True:
-        player = get_player_from_queue()
-        if player:
+        if player := get_player_from_queue():
             pool.add_player(player)
         else:
             pool.match()

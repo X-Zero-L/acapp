@@ -17,13 +17,12 @@ def getinfo_web(request):
         return JsonResponse({
             'result': "未登录"
         })
-    else:
-        player = Player.objects.get(user=user)
-        return JsonResponse({
-            'result': "success",
-            'username': player.user.username,
-            'photo': player.photo,
-        })
+    player = Player.objects.get(user=user)
+    return JsonResponse({
+        'result': "success",
+        'username': player.user.username,
+        'photo': player.photo,
+    })
 
 
 def getinfo(request):
